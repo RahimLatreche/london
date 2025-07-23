@@ -1,0 +1,63 @@
+id,equipRef,navName,siteRef,project,hisMode,unit,kind
+p:cmaib:r:2d065ef0-1b126cea,p:cmaib:r:2cd3f61f-7f07c21f,Discharge Pressure Setpoint,p:cmaib:r:2cd3e339-141cfc05,Comerica,cov,inH₂O,Number
+p:cmaib:r:2d065fdd-a6c158a3,p:cmaib:r:2cd3f61f-7f07c21f,Occupied Heat Setpoint,p:cmaib:r:2cd3e339-141cfc05,Comerica,cov,°F,Number
+p:cmaib:r:2d065eb5-376273d8,p:cmaib:r:2cd3f61f-7f07c21f,Cooling Stage 02 Command,p:cmaib:r:2cd3e339-141cfc05,Comerica,cov,,Bool
+p:cmaib:r:2d065fa2-8ef5114d,p:cmaib:r:2cd3f61f-7f07c21f,Mixed Temperature,p:cmaib:r:2cd3e339-141cfc05,Comerica,sampled,°F,Number
+p:cmaib:r:2d065e9d-016ed132,p:cmaib:r:2cd3f61f-7f07c21f,Cooling Enable Setpoint,p:cmaib:r:2cd3e339-141cfc05,Comerica,cov,°F,Number
+p:cmaib:r:2d065eeb-0b559883,p:cmaib:r:2cd3f61f-7f07c21f,Discharge Pressure,p:cmaib:r:2cd3e339-141cfc05,Comerica,sampled,inH₂O,Number
+p:cmaib:r:2d065f6a-6e89ebdf,p:cmaib:r:2cd3f61f-7f07c21f,Heating Valve Command,p:cmaib:r:2cd3e339-141cfc05,Comerica,sampled,%,Number
+p:cmaib:r:2d065eff-57e06260,p:cmaib:r:2cd3f61f-7f07c21f,Discharge Temperature,p:cmaib:r:2cd3e339-141cfc05,Comerica,sampled,°F,Number
+p:cmaib:r:2d065ef0-16932bf5,p:cmaib:r:2cd3f61f-7f07c21f,Discharge Pressure Min Reset Setpoint,p:cmaib:r:2cd3e339-141cfc05,Comerica,cov,inH₂O,Number
+p:cmaib:r:2d065fbb-175580fe,p:cmaib:r:2cd3f61f-7f07c21f,Occupied Mode,p:cmaib:r:2cd3e339-141cfc05,Comerica,cov,,Bool
+p:cmaib:r:2d065ead-18d58ae1,p:cmaib:r:2cd3f61f-7f07c21f,Cooling Stage 01 Command,p:cmaib:r:2cd3e339-141cfc05,Comerica,cov,,Bool
+p:cmaib:r:2d065fca-28c1ea5c,p:cmaib:r:2cd3f61f-7f07c21f,Occupied Cool Setpoint,p:cmaib:r:2cd3e339-141cfc05,Comerica,cov,°F,Number
+p:cmaib:r:2d065ff0-25956f97,p:cmaib:r:2cd3f61f-7f07c21f,Outside Damper,p:cmaib:r:2cd3e339-141cfc05,Comerica,sampled,%,Number
+p:cmaib:r:2d066070-020309b7,p:cmaib:r:2cd3f61f-7f07c21f,Zone CO,p:cmaib:r:2cd3e339-141cfc05,Comerica,sampled,ppm,Number
+p:cmaib:r:2d06604e-59d062b7,p:cmaib:r:2cd3f61f-7f07c21f,Unoccupied Cool Setpoint,p:cmaib:r:2cd3e339-141cfc05,Comerica,cov,°F,Number
+p:cmaib:r:2d066072-7dbebd6b,p:cmaib:r:2cd3f61f-7f07c21f,Zone CO2,p:cmaib:r:2cd3e339-141cfc05,Comerica,sampled,ppm,Number
+p:cmaib:r:2d06600b-7e4a708f,p:cmaib:r:2cd3f61f-7f07c21f,Outside Temperature,p:cmaib:r:2cd3e339-141cfc05,Comerica,sampled,°F,Number
+p:cmaib:r:2d066067-c328baa3,p:cmaib:r:2cd3f61f-7f07c21f,Unoccupied Heat Setpoint,p:cmaib:r:2cd3e339-141cfc05,Comerica,cov,°F,Number
+p:cmaib:r:2d0660d4-c34897c0,p:cmaib:r:2cd3f61f-7f07c21f,Zone Temperature Min,p:cmaib:r:2cd3e339-141cfc05,Comerica,sampled,°F,Number
+p:cmaib:r:2d0660bb-ca8c85a0,p:cmaib:r:2cd3f61f-7f07c21f,Zone Temperature Average,p:cmaib:r:2cd3e339-141cfc05,Comerica,sampled,°F,Number
+p:cmaib:r:2d066023-3febe118,p:cmaib:r:2cd3f61f-7f07c21f,Return Temperature,p:cmaib:r:2cd3e339-141cfc05,Comerica,sampled,°F,Number
+p:cmaib:r:2d066000-4a97ac5b,p:cmaib:r:2cd3f61f-7f07c21f,Outside Damper Min Reset Setpoint,p:cmaib:r:2cd3e339-141cfc05,Comerica,cov,%,Number
+p:cmaib:r:2d0660cb-0453fbff,p:cmaib:r:2cd3f61f-7f07c21f,Zone Temperature Max,p:cmaib:r:2cd3e339-141cfc05,Comerica,sampled,°F,Number
+p:cmaib:r:2d04e95e-fc66c70a,p:cmaib:r:2cd3f716-190e4f00,Discharge Temperature Setpoint,p:cmaib:r:2cd3e339-9c328eb0,Comerica,sampled,°F,Number
+p:cmaib:r:2d04e921-32fb363a,p:cmaib:r:2cd3f716-190e4f00,Cooling Stage 03 Command,p:cmaib:r:2cd3e339-9c328eb0,Comerica,cov,,Bool
+p:cmaib:r:2d04e9c0-a98fb867,p:cmaib:r:2cd3f716-190e4f00,Return Temperature,p:cmaib:r:2cd3e339-9c328eb0,Comerica,sampled,°F,Number
+p:cmaib:r:2d04e918-f2f69554,p:cmaib:r:2cd3f716-190e4f00,Cooling Enable Setpoint,p:cmaib:r:2cd3e339-9c328eb0,Comerica,sampled,°F,Number
+p:cmaib:r:2d04e981-adc30d95,p:cmaib:r:2cd3f716-190e4f00,Minimum Outside Damper Command,p:cmaib:r:2cd3e339-9c328eb0,Comerica,sampled,%,Number
+p:cmaib:r:2d04e9b1-80b590bb,p:cmaib:r:2cd3f716-190e4f00,Outside Temperature,p:cmaib:r:2cd3e339-9c328eb0,Comerica,sampled,°F,Number
+p:cmaib:r:2d04e945-54ebc115,p:cmaib:r:2cd3f716-190e4f00,Discharge Temperature,p:cmaib:r:2cd3e339-9c328eb0,Comerica,sampled,°F,Number
+p:cmaib:r:2d04e96c-9a2ecd7b,p:cmaib:r:2cd3f716-190e4f00,Exhaust Damper,p:cmaib:r:2cd3e339-9c328eb0,Comerica,sampled,%,Number
+p:cmaib:r:2d04e940-22c6e8b5,p:cmaib:r:2cd3f716-190e4f00,Discharge Pressure Setpoint,p:cmaib:r:2cd3e339-9c328eb0,Comerica,sampled,inH₂O,Number
+p:cmaib:r:2d04e9a8-9a0687e7,p:cmaib:r:2cd3f716-190e4f00,Outside Damper,p:cmaib:r:2cd3e339-9c328eb0,Comerica,sampled,%,Number
+p:cmaib:r:2d04e9bd-9b0f192a,p:cmaib:r:2cd3f716-190e4f00,Return Humidity,p:cmaib:r:2cd3e339-9c328eb0,Comerica,sampled,%RH,Number
+p:cmaib:r:2d04e8fb-120ffa28,p:cmaib:r:2cd3f716-190e4f00,Building Pressure Setpoint,p:cmaib:r:2cd3e339-9c328eb0,Comerica,sampled,inH₂O,Number
+p:cmaib:r:2d04e98a-e703e792,p:cmaib:r:2cd3f716-190e4f00,Mixed Temperature Setpoint,p:cmaib:r:2cd3e339-9c328eb0,Comerica,sampled,°F,Number
+p:cmaib:r:2d04e91d-7ce2ba37,p:cmaib:r:2cd3f716-190e4f00,Cooling Stage 01 Command,p:cmaib:r:2cd3e339-9c328eb0,Comerica,cov,,Bool
+p:cmaib:r:2d04e8f8-592438a2,p:cmaib:r:2cd3f716-190e4f00,Building Pressure,p:cmaib:r:2cd3e339-9c328eb0,Comerica,sampled,inH₂O,Number
+p:cmaib:r:2d04e93b-271eb3b8,p:cmaib:r:2cd3f716-190e4f00,Discharge Pressure,p:cmaib:r:2cd3e339-9c328eb0,Comerica,sampled,inH₂O,Number
+p:cmaib:r:2d04e985-148b97dd,p:cmaib:r:2cd3f716-190e4f00,Mixed Temperature,p:cmaib:r:2cd3e339-9c328eb0,Comerica,sampled,°F,Number
+p:cmaib:r:2d04e9ae-18657498,p:cmaib:r:2cd3f716-190e4f00,Outside Humidity,p:cmaib:r:2cd3e339-9c328eb0,Comerica,sampled,%RH,Number
+p:cmaib:r:2d04e9ca-2fb3c4aa,p:cmaib:r:2cd3f716-190e4f00,Unit Mode,p:cmaib:r:2cd3e339-9c328eb0,Comerica,cov,,Str
+p:cmaib:r:2d04e916-1d57bbd1,p:cmaib:r:2cd3f716-190e4f00,Cooling Enable Command,p:cmaib:r:2cd3e339-9c328eb0,Comerica,cov,,Bool
+p:cmaib:r:2d04e968-3b76f55a,p:cmaib:r:2cd3f716-190e4f00,Economizer Enable Temperature Setpoint,p:cmaib:r:2cd3e339-9c328eb0,Comerica,sampled,°F,Number
+p:cmaib:r:2d04e91f-8695f6bc,p:cmaib:r:2cd3f716-190e4f00,Cooling Stage 02 Command,p:cmaib:r:2cd3e339-9c328eb0,Comerica,cov,,Bool
+p:cmaib:r:2d0660f8-39eeb893,p:cmaib:r:2cd41152-451b5b0e,Cooling Stage 02 Command,p:cmaib:r:2cd3e339-65b64adf,Comerica,cov,,Bool
+p:cmaib:r:2d0660ea-e6965270,p:cmaib:r:2cd41152-451b5b0e,Cold Deck Discharge Temperature Setpoint,p:cmaib:r:2cd3e339-65b64adf,Comerica,sampled,°F,Number
+p:cmaib:r:2d0660f6-d5fda1c5,p:cmaib:r:2cd41152-451b5b0e,Cooling Stage 01 Command,p:cmaib:r:2cd3e339-65b64adf,Comerica,cov,,Bool
+p:cmaib:r:2d06614f-5de2f9b8,p:cmaib:r:2cd41152-451b5b0e,Outside Damper,p:cmaib:r:2cd3e339-65b64adf,Comerica,sampled,%,Number
+p:cmaib:r:2d066155-223d17df,p:cmaib:r:2cd41152-451b5b0e,Return Temperature,p:cmaib:r:2cd3e339-65b64adf,Comerica,sampled,°F,Number
+p:cmaib:r:2d0660e8-bb5e3bcd,p:cmaib:r:2cd41152-451b5b0e,Cold Deck Discharge Temperature,p:cmaib:r:2cd3e339-65b64adf,Comerica,sampled,°F,Number
+p:cmaib:r:2d066166-c41ab072,p:cmaib:r:2cd41152-451b5b0e,Unoccupied Heat Setpoint,p:cmaib:r:2cd3e339-65b64adf,Comerica,sampled,°F,Number
+p:cmaib:r:2d0660ec-722e9f97,p:cmaib:r:2cd41152-451b5b0e,Cooling Demand,p:cmaib:r:2cd3e339-65b64adf,Comerica,sampled,%,Number
+p:cmaib:r:2d066125-5ab149ae,p:cmaib:r:2cd41152-451b5b0e,Hot Deck Discharge Temperature,p:cmaib:r:2cd3e339-65b64adf,Comerica,sampled,°F,Number
+p:cmaib:r:2d066123-b69fb7fb,p:cmaib:r:2cd41152-451b5b0e,Heating Valve Command,p:cmaib:r:2cd3e339-65b64adf,Comerica,sampled,%,Number
+p:cmaib:r:2d066139-f3bb82d4,p:cmaib:r:2cd41152-451b5b0e,Occupied Mode,p:cmaib:r:2cd3e339-65b64adf,Comerica,cov,,Bool
+p:cmaib:r:2d066127-2c6aed49,p:cmaib:r:2cd41152-451b5b0e,Hot Deck Discharge Temperature Setpoint,p:cmaib:r:2cd3e339-65b64adf,Comerica,sampled,°F,Number
+p:cmaib:r:2d0660f1-82f0648e,p:cmaib:r:2cd41152-451b5b0e,Cooling Enable Setpoint,p:cmaib:r:2cd3e339-65b64adf,Comerica,sampled,°F,Number
+p:cmaib:r:2d066131-f95c2832,p:cmaib:r:2cd41152-451b5b0e,Mixed Temperature,p:cmaib:r:2cd3e339-65b64adf,Comerica,sampled,°F,Number
+p:cmaib:r:2d06615d-48bcf4e2,p:cmaib:r:2cd41152-451b5b0e,Unoccupied Cool Setpoint,p:cmaib:r:2cd3e339-65b64adf,Comerica,sampled,°F,Number
+p:cmaib:r:2d066118-a5e310f3,p:cmaib:r:2cd41152-451b5b0e,Heating Enable Setpoint,p:cmaib:r:2cd3e339-65b64adf,Comerica,sampled,°F,Number
+p:cmaib:r:2d06616d-c10fe947,p:cmaib:r:2cd41152-451b5b0e,Zone CO2,p:cmaib:r:2cd3e339-65b64adf,Comerica,sampled,ppm,Number
