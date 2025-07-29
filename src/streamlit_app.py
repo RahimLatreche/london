@@ -6,6 +6,14 @@ from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 import logging
 
+try:
+    from src.pattern_learner import PatternLearner
+    FEEDBACK_AVAILABLE = True
+except ImportError:
+    FEEDBACK_AVAILABLE = False
+    st.error("Feedback system not available. Please ensure pattern_learner.py and feedback_io.py are in src/ folder.")
+
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -198,13 +206,7 @@ with st.sidebar:
             )
         
         with col2:
-            top_k = st.slider(
-                "Candidates per Condition",
-                min_value=1,
-                max_value=10,
-                value=3,
-                help="Number of top matches to return for each condition."
-            )
+            top_k = 10
         
         submitted = st.form_submit_button(
             label="Run Matching",
@@ -530,119 +532,243 @@ if st.session_state.current_results and not st.session_state.processing:
                 st.dataframe(missing_df, use_container_width=True, hide_index=True)
     
     with tab4:
-        # Feedback section
-        try:
-            from src.pattern_learner import PatternLearner
-            learner = PatternLearner()
-            
-            st.subheader("Help Improve Match Quality")
-            st.markdown("Mark whether each match is correct to help the system learn.")
-            
-            # Create feedback form for each best match
-            for condition, best_def in results['best'].items():
-                if best_def:
-                    with st.expander(f"**{condition}** → {best_def}", expanded=False):
-                        info = safe_get_sensor_info(df_master, df_meta, best_def)
-                        
-                        col1, col2 = st.columns([3, 1])
-                        with col1:
-                            st.text(f"Display Name: {info['Display Name']}")
-                            st.text(f"Markers: {info['Markers'][:100]}")
-                        
-                        with col2:
-                            feedback_key = f"feedback_{condition}_{best_def}"
-                            
-                            # Three-way feedback
-                            feedback = st.radio(
-                                "Is this correct?",
-                                ["Correct", "Wrong", "Unsure"],
-                                key=feedback_key,
-                                horizontal=True
-                            )
-                            
-                            if feedback == "Wrong":
-                                correction = st.text_input(
-                                    "Correct sensor ID (optional):",
-                                    key=f"correction_{condition}_{best_def}"
-                                )
-                            else:
-                                correction = None
-                            
-                            if st.button("Submit", key=f"submit_{condition}_{best_def}"):
-                                is_correct = feedback == "Correct"
-                                learner.record_match_feedback(condition, best_def, is_correct, correction)
-                                st.success("Thank you for your feedback!")
+        st.subheader("Provide Feedback")
         
-        except ImportError:
-            st.info("Feedback system not available. Please ensure pattern_learner.py is installed.")
-    
-    with tab5:
-        # Learning Analytics
-        try:
-            from src.pattern_learner import PatternLearner
+        if not FEEDBACK_AVAILABLE:
+            st.error("Feedback system not available. Please ensure feedback_io.py and pattern_learner.py are installed.")
+        else:
             learner = PatternLearner()
             
-            st.subheader("Match Analytics")
+            st.markdown("Help improve the system by providing feedback on the sensor matches.")
             
-            # Load analytics
-            analytics = learner.analytics
+            # Feedback for each best match
+            if any(results['best'].values()):
+                st.markdown("#### Rate Sensor Matches")
+                
+                for condition, best_def in results['best'].items():
+                    if best_def:
+                        with st.expander(f"**{condition}** → {best_def}", expanded=False):
+                            info = safe_get_sensor_info(df_master, df_meta, best_def)
+                            
+                            # Show sensor details
+                            col1, col2 = st.columns([2, 1])
+                            with col1:
+                                st.write(f"**Display Name:** {info['Display Name']}")
+                                st.write(f"**Equipment:** {info['Equipment'][:100]}...")
+                                if info['Markers']:
+                                    st.write(f"**Markers:** {info['Markers'][:100]}...")
+                            
+                            with col2:
+                                # Feedback form
+                                feedback_key = f"feedback_{condition}_{best_def}"
+                                
+                                feedback = st.radio(
+                                    "Is this match correct?",
+                                    ["✅ Correct", "❌ Wrong", "🤔 Unsure"],
+                                    key=feedback_key,
+                                    horizontal=True
+                                )
+                                
+                                correction = ""
+                                if "Wrong" in feedback:
+                                    correction = st.text_input(
+                                        "Correct sensor ID (optional):",
+                                        key=f"correction_{condition}_{best_def}",
+                                        placeholder="Enter correct sensor ID..."
+                                    )
+                                
+                                if st.button("Submit Feedback", key=f"submit_{condition}_{best_def}", type="primary"):
+                                    is_correct = "Correct" in feedback
+                                    
+                                    try:
+                                        learner.record_match_feedback(
+                                            condition=condition,
+                                            sensor_id=best_def,
+                                            is_correct=is_correct,
+                                            correction=correction
+                                        )
+                                        st.success("✅ Thank you! Feedback saved.")
+                                        time.sleep(1)
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Failed to save feedback: {e}")
             
-            # Pattern performance metrics
+            else:
+                st.info("No sensor matches to provide feedback on.")
+            
+            # Report missing patterns
+            st.divider()
+            st.markdown("#### Report Missing Patterns")
+            
+            with st.expander("Found a sensor pattern that wasn't detected?", expanded=False):
+                st.markdown("If you notice sensor patterns in your rule that weren't found, report them here:")
+                
+                col1, col2 = st.columns([3, 1])
+                
+                with col1:
+                    missing_pattern = st.text_input(
+                        "Missing pattern:",
+                        key="missing_pattern_input",
+                        placeholder="e.g., 'exhaust fan', 'zone temperature'..."
+                    )
+                
+                with col2:
+                    st.write("")  # Spacing
+                    if st.button("Report Missing", key="report_missing", type="secondary"):
+                        if missing_pattern.strip():
+                            try:
+                                learner.record_missing_pattern(missing_pattern)
+                                st.success(f"✅ Reported: '{missing_pattern}'")
+                                time.sleep(1)
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Failed to report pattern: {e}")
+                        else:
+                            st.error("Please enter a pattern")
+
+    # Replace tab5 (Learning Analytics) with this:
+    with tab5:
+        st.subheader("Feedback Analytics")
+        
+        if not FEEDBACK_AVAILABLE:
+            st.error("Analytics not available. Please ensure feedback_io.py and pattern_learner.py are installed.")
+        else:
+            learner = PatternLearner()
+            stats = learner.get_feedback_stats()
+            
+            # Summary metrics
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("Total Feedback", stats['total_feedback'])
+            
+            with col2:
+                accuracy_delta = None
+                if stats['total_feedback'] > 0:
+                    accuracy_delta = f"{stats['accuracy']:.1f}%"
+                st.metric("Accuracy", f"{stats['accuracy']:.1f}%", delta=accuracy_delta)
+            
+            with col3:
+                st.metric("Corrections Given", stats['corrections'])
+            
+            with col4:
+                st.metric("Missing Patterns", stats['missing_patterns'])
+            
+            # Detailed analytics
+            if stats['total_feedback'] > 0:
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("#### Problematic Patterns")
+                    problematic = learner.get_problematic_patterns()
+                    
+                    if problematic:
+                        for p in problematic[:5]:
+                            st.warning(f"**{p['pattern']}** - {p['accuracy']:.1f}% accuracy ({p['total_feedback']} feedback)")
+                    else:
+                        st.success("No problematic patterns found!")
+                
+                with col2:
+                    st.markdown("#### Most Requested Missing")
+                    requested = learner.get_most_requested_patterns()
+                    
+                    if requested:
+                        for r in requested[:5]:
+                            st.info(f"**'{r['pattern']}'** - requested {r['count']} times")
+                    else:
+                        st.info("No missing patterns reported yet.")
+            
+            # Generate and show report
+            st.divider()
+            st.markdown("#### Feedback Report")
+            
+            report = learner.generate_report()
+            st.text(report)
+            
+            # Export options
             col1, col2, col3 = st.columns(3)
             
             with col1:
-                total_patterns = len(analytics.get("pattern_scores", {}))
-                st.metric("Patterns Tracked", total_patterns)
+                if st.button("📊 Export Feedback Data"):
+                    try:
+                        feedback_data = learner.sensor_feedback
+                        if feedback_data:
+                            df_feedback = pd.DataFrame(feedback_data)
+                            csv_data = df_feedback.to_csv(index=False)
+                            st.download_button(
+                                label="Download Sensor Feedback CSV",
+                                data=csv_data,
+                                file_name=f"sensor_feedback_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                mime="text/csv"
+                            )
+                        else:
+                            st.warning("No feedback data to export")
+                    except Exception as e:
+                        st.error(f"Export failed: {e}")
             
             with col2:
-                stopword_candidates = len(analytics.get("stopword_candidates", {}))
-                st.metric("Stopword Candidates", stopword_candidates)
+                if st.button("📋 Export Missing Patterns"):
+                    try:
+                        missing_patterns = learner.pattern_feedback.get('missing', [])
+                        if missing_patterns:
+                            df_missing = pd.DataFrame(missing_patterns, columns=['Missing Pattern'])
+                            csv_data = df_missing.to_csv(index=False)
+                            st.download_button(
+                                label="Download Missing Patterns CSV",
+                                data=csv_data,
+                                file_name=f"missing_patterns_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                                mime="text/csv"
+                            )
+                        else:
+                            st.warning("No missing patterns to export")
+                    except Exception as e:
+                        st.error(f"Export failed: {e}")
             
             with col3:
-                total_feedback = len(learner.feedback_data)
-                st.metric("Total Feedback", total_feedback)
+                if st.button("🗑️ Clear All Data", type="secondary"):
+                    if st.checkbox("⚠️ I understand this will delete all feedback", key="confirm_clear"):
+                        try:
+                            # Clear the files by writing empty defaults
+                            from src.feedback_io import sensor_fb_file, pattern_fb_file
+                            import json
+                            
+                            sensor_fb_file.write_text(json.dumps([], indent=2))
+                            pattern_fb_file.write_text(json.dumps({"missing": []}, indent=2))
+                            
+                            st.success("✅ All feedback data cleared!")
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Failed to clear data: {e}")
             
-            # Learning report
-            st.subheader("Learning Report")
-            report = learner.generate_learning_report()
-            st.text(report)
-            
-            # Recommendations
-            st.subheader("Recommendations")
-            recommendations = learner.get_pattern_recommendations()
-            
-            if st.button("Apply Recommendations", type="primary"):
-                with st.spinner("Updating patterns and stopwords..."):
-                    try:
-                        from src.sensor_matcher import DYNAMIC_PATTERNS, DYNAMIC_STOPWORDS, DF_MASTER_FULL
-                        updated_patterns, updated_stopwords = learner.auto_update_configurations(
-                            DYNAMIC_PATTERNS,
-                            DYNAMIC_STOPWORDS,
-                            DF_MASTER_FULL
-                        )
-                        st.success("Configurations updated successfully!")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Failed to update configurations: {str(e)}")
-        
-        except ImportError:
-            st.info("Learning analytics not available. Please ensure pattern_learner.py is installed.")
-
-else:
-    # Empty state
-    st.info("Enter search parameters in the sidebar to begin matching sensors to your rule description.")
-    
-    # Quick start guide
-    with st.expander("Quick Start Guide"):
-        st.markdown("""
-        1. **Enter a Rule Description**: Describe the conditions in natural language
-        2. **Select Equipment Type**: Choose the relevant equipment category
-        3. **Set Candidates Count**: Adjust how many matches you want per condition
-        4. **Run Matching**: Click the button to find matching sensors
-        5. **Review Results**: Explore best matches and all candidates
-        6. **Export Data**: Download results as CSV for further analysis
-        
-        **Example Rule**:
-        > Discharge fan is on, outdoor damper is open more than a threshold, cooling is on, 
-        > and return temperature is below the outdoor temperature.
-        """)
+            # Show recent feedback if available
+            if stats['total_feedback'] > 0:
+                st.divider()
+                st.markdown("#### Recent Feedback")
+                
+                recent_feedback = learner.sensor_feedback[-10:]  # Last 10
+                display_data = []
+                
+                for fb in reversed(recent_feedback):  # Most recent first
+                    display_data.append({
+                        'Date': fb.get('timestamp', '').split('T')[0],
+                        'Pattern': fb.get('condition', ''),
+                        'Sensor': fb.get('definition', ''),
+                        'Correct': '✅' if fb.get('was_correct') else '❌',
+                        'Correction': fb.get('correction', '')[:50] + '...' if len(fb.get('correction', '')) > 50 else fb.get('correction', '')
+                    })
+                
+                if display_data:
+                    df_recent = pd.DataFrame(display_data)
+                    st.dataframe(
+                        df_recent,
+                        use_container_width=True,
+                        hide_index=True,
+                        column_config={
+                            'Date': st.column_config.TextColumn(width="small"),
+                            'Pattern': st.column_config.TextColumn(width="medium"),
+                            'Sensor': st.column_config.TextColumn(width="medium"),
+                            'Correct': st.column_config.TextColumn(width="small"),
+                            'Correction': st.column_config.TextColumn(width="large")
+                        }
+                    )

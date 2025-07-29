@@ -25,6 +25,10 @@ ACCESS_TOKEN = get_access_token()
 EMBED_DEPLOYMENT_ID = "AOAIsharednonprodtxtembeddingada002"
 EMBED_API_VERSION   = "2024-02-15-preview"
 
+# LLM Chat Completion settings
+CHAT_DEPLOYMENT_ID = "AOAIsharednonprodgpt35turbo"
+CHAT_API_VERSION = "2024-02-15-preview"
+
 def embed_via_wso2(phrase: str) -> List[float]:
     """
     Call the CBRE WSO2 proxy to get an embedding for `phrase`.
@@ -43,6 +47,110 @@ def embed_via_wso2(phrase: str) -> List[float]:
     resp = requests.post(url, headers=headers, json=body)
     resp.raise_for_status()
     return resp.json()["data"][0]["embedding"]
+
+def extract_patterns_via_llm(rule_text: str) -> List[str]:
+    """
+    Extract sensor patterns from rule text using LLM via CBRE WSO2 proxy.
+    This is the PRIMARY method for pattern extraction.
+    """
+    # Enhanced few-shot prompt for better pattern extraction
+    prompt = f"""Extract key sensor and equipment phrases from the following HVAC rule description. Each phrase should represent a physical sensor, equipment component, or measurable condition.
+
+**What to INCLUDE:**
+- Physical sensors: "supply air temperature", "return temperature", "pressure sensor"
+- Equipment components: "discharge fan", "cooling coil", "outside air damper"  
+- Measurable conditions: "cooling", "heating", "fan speed"
+- Equipment states when referring to specific equipment: "chiller", "pump"
+
+**What to EXCLUDE:**
+- Time/duration words: "duration", "time", "minutes", "hours"
+- Comparison/threshold terms: "setpoint", "threshold", "deadband", "minimum", "maximum", "above", "below", "exceeds"
+- State descriptors: "active", "on", "off", "open", "closed", "running"
+- Logic/condition words: "and", "or", "but", "if", "when", "for", "at least"
+- Generic qualifiers: "specified", "certain", "given"
+- Articles and prepositions: "the", "a", "an", "of", "from", "to"
+
+**Special handling:**
+- For compound phrases like "mixed or discharge air temperature", extract each component: "mixed air temperature", "discharge air temperature"
+- Focus on the noun/noun phrase, not the adjective: "supply air temperature" not just "supply"
+
+**Examples:**
+
+Input: "chiller is off and condenser water pump is running"
+Output: ["chiller", "condenser water pump"]
+
+Input: "supply air temperature exceeds setpoint and heating coil valve opens"  
+Output: ["supply air temperature", "heating coil valve"]
+
+Input: "cooling is on and discharge fan speed is above minimum"
+Output: ["cooling", "discharge fan", "fan speed"]
+
+Input: "supply fan is active, the outside air damper is open, but the mixed or discharge air temperature is outside of a deadband from the outside air temperature for at least a specified duration"
+Output: ["supply fan", "outside air damper", "mixed air temperature", "discharge air temperature", "outside air temperature"]
+
+Now extract from this:
+Input: {rule_text}
+Output: """
+
+    url = (
+        f"https://api-test.cbre.com:443/"
+        f"t/digitaltech_us_edp/cbreopenaiendpoint/1/"
+        f"openai/deployments/{CHAT_DEPLOYMENT_ID}/chat/completions"
+        f"?api-version={CHAT_API_VERSION}"
+    )
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {ACCESS_TOKEN}"
+    }
+    payload = {
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 300,  # Increased for more patterns
+        "temperature": 0
+    }
+
+    try:
+        resp = requests.post(url, headers=headers, json=payload)
+        resp.raise_for_status()
+        content = resp.json()["choices"][0]["message"]["content"].strip()
+        
+        # Parse LLM output as JSON list
+        try:
+            phrases = json.loads(content)
+        except json.JSONDecodeError:
+            # Fallback: wrap content in brackets if missing
+            try:
+                phrases = json.loads("[" + content + "]")
+            except json.JSONDecodeError:
+                # Final fallback: extract phrases manually
+                phrases = []
+                # Look for quoted strings
+                import re
+                quotes = re.findall(r'"([^"]+)"', content)
+                if quotes:
+                    phrases = quotes
+                else:
+                    # Split by comma and clean
+                    phrases = [p.strip().strip('"\'') for p in content.split(',')]
+        
+        # Clean and filter the extracted phrases
+        cleaned_phrases = []
+        for phrase in phrases:
+            if isinstance(phrase, str):
+                phrase = phrase.strip().lower()
+                # More permissive filtering - let LLM decide what's important
+                if (phrase and 
+                    len(phrase) > 1 and 
+                    phrase not in ESSENTIAL_STOPWORDS and
+                    not phrase.isdigit() and
+                    not all(c in '.,!?;:' for c in phrase)):  # Not just punctuation
+                    cleaned_phrases.append(phrase)
+        
+        print(f"LLM extracted {len(cleaned_phrases)} patterns: {cleaned_phrases}")
+        return cleaned_phrases
+        
+    except Exception as e:
+        print(f"Warning: LLM pattern extraction failed: {e}")
+        return []
 
 # ——————————————————————
 # 3) Paths & pre‑loads
@@ -70,61 +178,24 @@ def _load_index():
 _load_index()
 
 # ——————————————————————
-# 4) Concepts & stopwords (expanded for full "Economizing and Cooling Simultaneously" rule)
+# 4) Minimal fallback patterns and stopwords (only for emergency fallback)
 # ——————————————————————
-PATTERNS = [
+# These are only used if LLM extraction completely fails
+EMERGENCY_PATTERNS = [
     "discharge fan",
-    "supply fan",  # Adding related fan patterns
-    "exhaust fan",
-    "return fan",
+    "cooling valve", 
     "outdoor damper",
-    "outdoor temperature", 
     "return temperature",
-    "cooling valve",
-    "face bypass damper",
-    "outside airflow",
-    "minimum outside airflow",
-    "return co2",
-    "return co2 setpoint",
-    "cold water pump",
-    "communication alarm",
-    # NEW: Add more specific patterns to prevent single-word matches
-    "outside airflow setpoint",
-    "minimum outside airflow setpoint",
-    "cooling valves",
-    "cold water pumps",
-    "zone co2",
-    "zone co2 setpoint",
-    # Remove control keywords from patterns
-    # "andModes",
-    # "orModes",
+    "outdoor temperature"
 ]
 
-# Enhanced stopwords to filter out control words and problematic terms
-STOPWORDS = {
-    # original handful…
+# Minimal essential stopwords to filter out obviously non-sensor words
+ESSENTIAL_STOPWORDS = {
     "and", "the", "more", "than", "below", "open", "threshold",
-    # plus supplements to filter out control‑flow words
-    "unit", "has", "by", "for", "over", "periods", "when", "if",
-    "only", "used", "also", "make", "sure", "associated", "points",
-    "are", "all", "on", "any",
-    # NEW: Control keywords that shouldn't be treated as sensors
-    "andmodes", "ormodes", "modes", "active", "must", "should",
-    "will", "based", "using", "following", "required", "during",
-    "true", "false", "above", "between", "either",
-    "spark", "rule", "finds", "check", "verify", "ensure",
-    # Additional problematic single words from results
-    "cold", "hot", "warm", "cool",  # Too generic without context
-    # MORE stopwords from the bad matches
-    "this", "that", "have", "found", "requires", "simultaneously",
-    "parameter", "duration", "inside", "economizing", "cooling",
-    "water", "pumps", "valves", "record", "from", "with", "into",
-    "been", "were", "their", "these", "those", "through", "where",
-    "which", "while", "within", "would", "could", "shall", "might",
-    "being", "having", "doing", "saying", "going", "making", "getting",
-    "finding", "periods", "times", "uses", "needs", "means", "ways",
-    "types", "kinds", "forms", "parts", "areas", "cases", "things",
-    "face",  # Too generic - need "face bypass damper" as full pattern
+    "when", "if", "only", "also", "make", "sure", "are", "all", "on", "any",
+    "must", "should", "will", "based", "using", "following", "required", "during",
+    "true", "false", "above", "between", "either", "over", "periods",
+    "spark", "rule", "finds", "check", "verify", "ensure", "has", "by", "for"
 }
 
 # ——————————————————————
@@ -229,11 +300,9 @@ def extract_common_patterns_from_display_names(min_count: int = 5) -> List[str]:
     
     return common_patterns
 
-# Combine static patterns with learned patterns
-DYNAMIC_PATTERNS = PATTERNS + list(load_learned_patterns())
-
-# Combine static stopwords with learned stopwords
-DYNAMIC_STOPWORDS = STOPWORDS.union(load_learned_stopwords())
+# For backward compatibility - these are now only used as emergency fallbacks
+DYNAMIC_PATTERNS = EMERGENCY_PATTERNS + list(load_learned_patterns())
+DYNAMIC_STOPWORDS = ESSENTIAL_STOPWORDS.union(load_learned_stopwords())
 
 RAW_K_MULTIPLIER = 10
 
@@ -295,16 +364,22 @@ def match_sensors_vector(phrase: str, top_k: int = 5) -> List[str]:
     return [_sensor_ids[i] for i in idxs[0]]
 
 # ——————————————————————
-# 8) Core matcher (IMPROVED with Route 1 and Fallbacks)
+# 8) Core matcher (LLM-First Approach)
 # ——————————————————————
 def match_sensors(
     rule_text: str,
     equipment: str,
-    top_k: int = 5
+    top_k: int = 5,
+    use_llm_extraction: bool = True
 ) -> Tuple[Dict[str, List[str]], Dict[str, List[Dict]]]:
     """
-    Match sensors using Route 1: Vector search first, then filter.
-    Now includes fallback mappings for patterns not in metadata.
+    Match sensors using LLM-first approach: Extract patterns via LLM, then vector search.
+    
+    Args:
+        rule_text: The rule description text
+        equipment: Equipment type to filter by
+        top_k: Number of top results to return
+        use_llm_extraction: Whether to use LLM for pattern extraction
     
     Returns:
         - results: Dict mapping patterns to matched sensor IDs
@@ -337,12 +412,44 @@ def match_sensors(
     
     results = {}
     missing_metadata = {}
-    matched = set()
     
-    # Process multi‑word patterns
-    for pat in DYNAMIC_PATTERNS:
-        if re.search(rf"\b{re.escape(pat)}\b", text):
-            # ROUTE 1: Search ALL sensors first
+    # PRIMARY: Extract patterns using LLM
+    patterns_to_process = []
+    if use_llm_extraction:
+        llm_patterns = extract_patterns_via_llm(rule_text)
+        if llm_patterns:
+            patterns_to_process = llm_patterns
+            print(f"Using {len(llm_patterns)} LLM-extracted patterns: {llm_patterns}")
+        else:
+            print("LLM extraction returned no patterns, falling back to emergency patterns")
+            patterns_to_process = EMERGENCY_PATTERNS
+    else:
+        print("LLM extraction disabled, using emergency patterns + learned patterns")
+        patterns_to_process = DYNAMIC_PATTERNS
+    
+    # Add learned patterns if available
+    learned_patterns = list(load_learned_patterns())
+    if learned_patterns:
+        patterns_to_process.extend(learned_patterns)
+        print(f"Added {len(learned_patterns)} learned patterns")
+    
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_patterns = []
+    for pat in patterns_to_process:
+        if pat not in seen:
+            unique_patterns.append(pat)
+            seen.add(pat)
+    
+    print(f"Processing {len(unique_patterns)} unique patterns")
+    
+    # Process each pattern
+    for pat in unique_patterns:
+        # Check if pattern appears in the rule text
+        if re.search(rf"\b{re.escape(pat)}\b", text, re.IGNORECASE):
+            print(f"Processing pattern: '{pat}'")
+            
+            # Vector search for this pattern
             raw = match_sensors_vector(pat, top_k * RAW_K_MULTIPLIER)
             
             # Filter by equipment
@@ -398,55 +505,24 @@ def match_sensors(
                 
                 if filtered_info:
                     missing_metadata[pat] = filtered_info
-            
-            matched.update(pat.split())
+        else:
+            print(f"Pattern '{pat}' not found in rule text")
     
-    # Process single‑word fallback
-    tokens = re.findall(r"\b[a-z]{4,}\b", text)
-    # Filter more aggressively - only keep potential sensor-related words
-    leftover = [
-        w for w in set(tokens) 
-        if w not in matched 
-        and w.lower() not in DYNAMIC_STOPWORDS
-        and len(w) >= 5  # Increased minimum length
-        and not w.isdigit()  # No pure numbers
-        and any(char in w for char in 'aeiou')  # Must have vowels (real words)
-    ]
-    
-    # Additional filter: Only process words that might be sensor-related
-    sensor_keywords = {'temp', 'press', 'flow', 'speed', 'alarm', 'fault', 'status', 
-                      'sensor', 'meter', 'valve', 'damper', 'setpoint', 'mode'}
-    leftover = [w for w in leftover if any(kw in w for kw in sensor_keywords)]
-    
-    for w in leftover:
-        # Same Route 1 approach for single words
-        raw = match_sensors_vector(w, top_k * RAW_K_MULTIPLIER)
-        equipment_filtered = [sid for sid in raw if sid in equipment_sensor_ids]
-        metadata_filtered = [sid for sid in equipment_filtered if sid in valid_ids][:top_k]
+    # If we have very few results and LLM was used, try emergency patterns as backup
+    successful_patterns = [p for p, matches in results.items() if matches]
+    if use_llm_extraction and len(successful_patterns) < 2:
+        print(f"Only found {len(successful_patterns)} successful patterns, trying emergency backup...")
         
-        filtered_out = [
-            sid for sid in equipment_filtered 
-            if sid not in valid_ids
-        ][:5]
-        
-        results[w] = metadata_filtered
-        
-        if filtered_out:
-            filtered_info = []
-            for sid in filtered_out:
-                try:
-                    row = DF_MASTER_FULL.loc[DF_MASTER_FULL["Definition"] == sid].iloc[0]
-                    filtered_info.append({
-                        'definition': sid,
-                        'display_name': row['Display Name'],
-                        'markers': row.get('Markers', ''),
-                        'equipment': row.get('Equipment', '')
-                    })
-                except:
-                    continue
-            
-            if filtered_info:
-                missing_metadata[w] = filtered_info
+        for pat in EMERGENCY_PATTERNS:
+            if pat not in results and re.search(rf"\b{re.escape(pat)}\b", text, re.IGNORECASE):
+                print(f"Emergency backup processing: '{pat}'")
+                raw = match_sensors_vector(pat, top_k * RAW_K_MULTIPLIER)
+                equipment_filtered = [sid for sid in raw if sid in equipment_sensor_ids]
+                metadata_filtered = [sid for sid in equipment_filtered if sid in valid_ids][:top_k]
+                
+                if metadata_filtered:
+                    results[pat] = metadata_filtered
+                    print(f"Emergency backup found {len(metadata_filtered)} matches for '{pat}'")
     
     return results, missing_metadata
 
@@ -457,17 +533,25 @@ def match_and_choose(
     rule_text: str,
     equipment: str,
     top_k: int = 5,
-    return_missing: bool = True
+    return_missing: bool = True,
+    use_llm_extraction: bool = True
 ) -> Tuple[Dict[str, List[str]], Dict[str, str], Optional[Dict[str, List[Dict]]]]:
     """
-    Enhanced version that returns missing metadata information.
+    Enhanced version that returns missing metadata information and supports LLM extraction.
+    
+    Args:
+        rule_text: The rule description text
+        equipment: Equipment type to filter by
+        top_k: Number of top results to return
+        return_missing: Whether to return missing metadata info
+        use_llm_extraction: Whether to use LLM for pattern extraction
     
     Returns:
         - candidates: Dict of pattern -> list of sensor IDs
         - best: Dict of pattern -> best sensor ID
         - missing_metadata: Dict of pattern -> list of filtered sensors (if return_missing=True)
     """
-    candidates, missing_metadata = match_sensors(rule_text, equipment, top_k)
+    candidates, missing_metadata = match_sensors(rule_text, equipment, top_k, use_llm_extraction)
     best = {c: (l[0] if l else None) for c, l in candidates.items()}
     
     if return_missing:
@@ -521,7 +605,7 @@ def find_available_sensors_in_metadata(keywords: List[str]) -> Dict[str, List[st
     return available
 
 # ——————————————————————
-# 12) Demo (UPDATED)
+# 12) Demo (LLM-First Approach)
 # ——————————————————————
 if __name__ == "__main__":
     # First, explore what's available in metadata for discharge fan alternatives
@@ -537,15 +621,17 @@ if __name__ == "__main__":
         "cooling is on, and return temperature is below the outdoor temperature."
     )
     
-    # Use the enhanced version
+    # Test LLM-first approach
+    print("=== TESTING LLM-FIRST APPROACH (PRIMARY) ===")
     candidates, best, missing = match_and_choose(
         RULE, 
         equipment="AHU", 
         top_k=3,
-        return_missing=True
+        return_missing=True,
+        use_llm_extraction=True
     )
 
-    print("=== MATCHES FOUND ===")
+    print("\n=== LLM-FIRST RESULTS ===")
     for cond, defs in candidates.items():
         print(f"\nCondition: {cond!r}")
         unique_defs = list(dict.fromkeys(defs))
@@ -566,10 +652,38 @@ if __name__ == "__main__":
     
     # Show missing metadata sensors
     if missing:
-        print("\n\n=== SENSORS FOUND BUT MISSING FROM METADATA ===")
+        print("\n\n=== SENSORS FOUND BUT MISSING FROM METADATA (LLM-FIRST) ===")
         for cond, filtered_sensors in missing.items():
             print(f"\nCondition: {cond!r}")
             for sensor in filtered_sensors:
                 print(f"   - Definition:    {sensor['definition']}")
                 print(f"     Display Name:  {sensor['display_name']}")
                 print(f"     Equipment:     {sensor['equipment'][:50]}...")
+    
+    # Compare with emergency fallback (no LLM)
+    print("\n\n" + "="*50)
+    print("=== TESTING EMERGENCY FALLBACK (NO LLM) ===")
+    candidates_emergency, best_emergency, missing_emergency = match_and_choose(
+        RULE, 
+        equipment="AHU", 
+        top_k=3,
+        return_missing=True,
+        use_llm_extraction=False
+    )
+    
+    print(f"LLM-first approach found {len([p for p in candidates.values() if p])} patterns with matches")
+    print(f"Emergency fallback found {len([p for p in candidates_emergency.values() if p])} patterns with matches")
+    
+    # Show what patterns were different
+    llm_patterns = set(candidates.keys())
+    emergency_patterns = set(candidates_emergency.keys())
+    
+    llm_only = llm_patterns - emergency_patterns
+    emergency_only = emergency_patterns - llm_patterns
+    
+    if llm_only:
+        print(f"\nPatterns found ONLY by LLM: {list(llm_only)}")
+    if emergency_only:
+        print(f"Patterns found ONLY by emergency fallback: {list(emergency_only)}")
+    
+    print(f"\nConclusion: LLM-first approach is {'MORE' if len(llm_patterns) > len(emergency_patterns) else 'LESS' if len(llm_patterns) < len(emergency_patterns) else 'EQUALLY'} effective for this rule.")
